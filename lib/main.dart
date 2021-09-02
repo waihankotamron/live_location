@@ -7,6 +7,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:live_location/models/pin_pill_info.dart';
 import 'package:location/location.dart';
 import 'dart:async';
+import 'package:geolocator/geolocator.dart';
 
 const double CAMERA_ZOOM = 16;
 const double CAMERA_TILT = 0;
@@ -165,17 +166,6 @@ class MapPageState extends State<MapPage> {
 
   void updateDriverLocation(LocationData newLocalData) async {
     LatLng latLng = LatLng(newLocalData.latitude, newLocalData.longitude);
-    var isRunning = await FlutterBackgroundService().isServiceRunning();
-    if (isRunning) {
-      FlutterBackgroundService().sendData(
-        {
-          "lat": latLng.latitude,
-          "lng": latLng.longitude,
-        },
-      );
-    } else {
-      FlutterBackgroundService.initialize(onStart);
-    }
     this.setState(() {
       _markers.removeWhere((m) => m.markerId.value == 'driverMarker');
 
@@ -351,21 +341,20 @@ class Utils {
 }
 
 void onStart() {
-  double lat,lng;
   WidgetsFlutterBinding.ensureInitialized();
   final service = FlutterBackgroundService();
 
   service.onDataReceived.listen((event) {
     if (event["action"] == "stopService") {
       service.stopBackgroundService();
-    } else {
-      lat = event["lat"];
-      lng = event["lng"];
+    } else if (event["action"] == "startAPICall"){
+     print("Start API Call");
     }
   });
 
   Timer.periodic(Duration(seconds: 4), (timer) async {
     if (!(await service.isServiceRunning())) timer.cancel();
-    print("Api Call Working $lat --- $lng");
+    Position userLocation = await Geolocator().getCurrentPosition();
+    print("Api Call Working From GEO  $userLocation");
   });
 }
